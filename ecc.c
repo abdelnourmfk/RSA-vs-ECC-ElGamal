@@ -154,7 +154,7 @@ int main(void) {
     printf("QA = (%lld,%lld)%s\n", QA.x, QA.y, QA.infinity ? " INF" : "");
 
     // Message à chiffrer (doit être un point sur la courbe)
-    Point M = {10, 20, false};
+    Point M = {30, 0, false};
 
     // Vérification que les points sont sur la courbe
     if (!is_on_curve(G, a, b, p) || !is_on_curve(M, a, b, p)) {
