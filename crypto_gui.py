@@ -165,11 +165,15 @@ class CryptoComparator:
     def rsa_test(self):
         try:
             m = int(self.rsa_message.get())
-            start = time.time()
-            c = self.rsa.encrypt(m)
-            d = self.rsa.decrypt(c)
-            end = time.time()
-            self.rsa_result.config(text=f"Encrypted: {c}\nDecrypted: {d}\nTime: {end-start:.6f}s")
+            # Run multiple iterations for accurate timing
+            iterations = 1000
+            start = time.perf_counter()
+            for _ in range(iterations):
+                c = self.rsa.encrypt(m)
+                d = self.rsa.decrypt(c)
+            end = time.perf_counter()
+            avg_time = (end - start) / iterations
+            self.rsa_result.config(text=f"Encrypted: {c}\nDecrypted: {d}\nAvg Time: {avg_time:.8f}s per operation")
         except ValueError:
             messagebox.showerror("Error", "Invalid RSA message")
 
@@ -178,43 +182,53 @@ class CryptoComparator:
             coords = self.ecc_message.get().split(',')
             M = Point(int(coords[0]), int(coords[1]))
             k = int(self.k_value.get())
-            start = time.time()
-            C1, C2 = self.ecc.encrypt(M, k)
-            decrypted = self.ecc.decrypt(C1, C2)
-            end = time.time()
-            self.ecc_result.config(text=f"C1: {C1}\nC2: {C2}\nDecrypted: {decrypted}\nTime: {end-start:.6f}s")
+            # Run multiple iterations for accurate timing
+            iterations = 1000
+            start = time.perf_counter()
+            for _ in range(iterations):
+                C1, C2 = self.ecc.encrypt(M, k)
+                decrypted = self.ecc.decrypt(C1, C2)
+            end = time.perf_counter()
+            avg_time = (end - start) / iterations
+            self.ecc_result.config(text=f"C1: {C1}\nC2: {C2}\nDecrypted: {decrypted}\nAvg Time: {avg_time:.8f}s per operation")
         except Exception:
             messagebox.showerror("Error", "Invalid ECC message or k")
 
     def compare_performance(self):
-        # Simple comparison
+        # Performance comparison with higher precision timing
         rsa_times = []
         ecc_times = []
+
+        iterations = 100  # More iterations for better accuracy
 
         for _ in range(10):
             # RSA
             m = 42
-            start = time.time()
-            c = self.rsa.encrypt(m)
-            self.rsa.decrypt(c)
-            end = time.time()
-            rsa_times.append(end - start)
+            start = time.perf_counter()
+            for _ in range(iterations):
+                c = self.rsa.encrypt(m)
+                self.rsa.decrypt(c)
+            end = time.perf_counter()
+            rsa_times.append((end - start) / iterations)
 
             # ECC
             M = Point(10, 20)
             k = 3
-            start = time.time()
-            C1, C2 = self.ecc.encrypt(M, k)
-            self.ecc.decrypt(C1, C2)
-            end = time.time()
-            ecc_times.append(end - start)
+            start = time.perf_counter()
+            for _ in range(iterations):
+                C1, C2 = self.ecc.encrypt(M, k)
+                self.ecc.decrypt(C1, C2)
+            end = time.perf_counter()
+            ecc_times.append((end - start) / iterations)
 
         avg_rsa = sum(rsa_times) / len(rsa_times)
         avg_ecc = sum(ecc_times) / len(ecc_times)
 
-        self.comp_result.config(text=f"Average RSA time: {avg_rsa:.6f}s\nAverage ECC time: {avg_ecc:.6f}s\n"
+        self.comp_result.config(text=f"Average RSA time: {avg_rsa:.8f}s per operation\n"
+                                   f"Average ECC time: {avg_ecc:.8f}s per operation\n"
                                    f"Key sizes: RSA n={self.rsa.n} ({len(str(self.rsa.n))} digits)\n"
-                                   f"ECC key size: p={self.ecc.p} ({len(str(self.ecc.p))} digits)")
+                                   f"ECC key size: p={self.ecc.p} ({len(str(self.ecc.p))} digits)\n"
+                                   f"ECC is {avg_rsa/avg_ecc:.1f}x faster than RSA")
 
 if __name__ == "__main__":
     root = tk.Tk()
