@@ -151,10 +151,11 @@ int main(void) {
 
     // Calcul de la clé publique QA = dA * G
     Point QA = scalar_mult(dA, G, a, p);
-    printf("QA = (%lld,%lld)%s\n", QA.x, QA.y, QA.infinity ? " INF" : "");
+    printf("QA = dA * G = %lld * (%lld,%lld) = (%lld,%lld)\n", dA, G.x, G.y, QA.x, QA.y);
 
     // Message à chiffrer (doit être un point sur la courbe)
     Point M = {30, 0, false};
+    printf("Message M = (%lld,%lld)\n", M.x, M.y);
 
     // Vérification que les points sont sur la courbe
     if (!is_on_curve(G, a, b, p) || !is_on_curve(M, a, b, p)) {
@@ -164,16 +165,19 @@ int main(void) {
 
     // Valeur k aléatoire choisie par Bob (ici k=3 pour l'exemple)
     long long k = 3;
+    printf("Random k chosen by Bob: %lld\n", k);
 
     // Chiffrement
+    printf("\n--- Chiffrement ---\n");
     Point C1, C2;
     encrypt(M, k, G, QA, a, p, &C1, &C2);
-    printf("C1 = (%lld,%lld)\n", C1.x, C1.y);
-    printf("C2 = (%lld,%lld)\n", C2.x, C2.y);
+    printf("C1 = k * G = %lld * (%lld,%lld) = (%lld,%lld)\n", k, G.x, G.y, C1.x, C1.y);
+    printf("C2 = M + k*QA = (%lld,%lld) + %lld*(%lld,%lld) = (%lld,%lld)\n", M.x, M.y, k, QA.x, QA.y, C2.x, C2.y);
 
     // Déchiffrement
+    printf("\n--- Dechiffrement ---\n");
     Point Mdec = decrypt(C1, C2, dA, a, p);
-    printf("Mdec = (%lld,%lld)\n", Mdec.x, Mdec.y);
+    printf("Mdec = C2 - dA*C1 = (%lld,%lld) - %lld*(%lld,%lld) = (%lld,%lld)\n", C2.x, C2.y, dA, C1.x, C1.y, Mdec.x, Mdec.y);
 
     // Vérification du déchiffrement
     if (Mdec.infinity == false && Mdec.x == M.x && Mdec.y == M.y) {
