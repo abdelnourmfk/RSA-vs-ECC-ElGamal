@@ -1,0 +1,222 @@
+import tkinter as tk
+from tkinter import messagebox
+import time
+
+# RSA Implementation
+def gcd(a, b):
+    while b != 0:
+        a, b = b, a % b
+    return a
+
+def mod_pow(base, exp, mod):
+    result = 1
+    base %= mod
+    while exp > 0:
+        if exp % 2 == 1:
+            result = (result * base) % mod
+        base = (base * base) % mod
+        exp //= 2
+    return result
+
+def mod_inverse(a, m):
+    m0 = m
+    y = 0
+    x = 1
+    if m == 1:
+        return 0
+    while a > 1:
+        q = a // m
+        t = m
+        m = a % m
+        a = t
+        t = y
+        y = x - q * y
+        x = t
+    if x < 0:
+        x += m0
+    return x
+
+class RSA:
+    def __init__(self):
+        self.p = 61
+        self.q = 53
+        self.n = self.p * self.q
+        self.phi = (self.p - 1) * (self.q - 1)
+        self.e = 17
+        self.d = mod_inverse(self.e, self.phi)
+
+    def encrypt(self, m):
+        return mod_pow(m, self.e, self.n)
+
+    def decrypt(self, c):
+        return mod_pow(c, self.d, self.n)
+
+# ECC Implementation
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __repr__(self):
+        return f"({self.x}, {self.y})"
+
+def mod_inverse_ecc(a, m):
+    return mod_inverse(a, m)
+
+def point_add(P, Q, a, p):
+    if P == Q:
+        return point_double(P, a, p)
+    if P.x == Q.x:
+        return None  # Infinity
+    dx = (Q.x - P.x) % p
+    dy = (Q.y - P.y) % p
+    lam = (dy * mod_inverse_ecc(dx, p)) % p
+    x3 = (mod_pow(lam, 2, p) - P.x - Q.x) % p
+    y3 = (lam * ((P.x - x3) % p) % p - P.y) % p
+    return Point(x3, y3)
+
+def point_double(P, a, p):
+    if P.y == 0:
+        return None
+    lam = ((3 * mod_pow(P.x, 2, p) + a) * mod_inverse_ecc(2 * P.y, p)) % p
+    x3 = (mod_pow(lam, 2, p) - 2 * P.x) % p
+    y3 = (lam * ((P.x - x3) % p) % p - P.y) % p
+    return Point(x3, y3)
+
+def scalar_mult(k, P, a, p):
+    result = None
+    temp = P
+    while k > 0:
+        if k % 2 == 1:
+            if result is None:
+                result = temp
+            else:
+                result = point_add(result, temp, a, p)
+        temp = point_double(temp, a, p)
+        k //= 2
+    return result
+
+class ECC_ElGamal:
+    def __init__(self):
+        self.p = 97
+        self.a = 2
+        self.b = 3
+        self.G = Point(3, 6)
+        self.dA = 7
+        self.QA = scalar_mult(self.dA, self.G, self.a, self.p)
+
+    def encrypt(self, M, k):
+        C1 = scalar_mult(k, self.G, self.a, self.p)
+        kQA = scalar_mult(k, self.QA, self.a, self.p)
+        C2 = point_add(M, kQA, self.a, self.p)
+        return C1, C2
+
+    def decrypt(self, C1, C2):
+        dC1 = scalar_mult(self.dA, C1, self.a, self.p)
+        # Subtract: add negative
+        neg_dC1 = Point(dC1.x, (-dC1.y) % self.p)
+        return point_add(C2, neg_dC1, self.a, self.p)
+
+# GUI
+class CryptoComparator:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("RSA vs ECC ElGamal Comparator")
+        self.rsa = RSA()
+        self.ecc = ECC_ElGamal()
+
+        # RSA Section
+        tk.Label(root, text="RSA Encryption", font=("Arial", 14)).grid(row=0, column=0, columnspan=2)
+        tk.Label(root, text="Message (integer):").grid(row=1, column=0)
+        self.rsa_message = tk.Entry(root)
+        self.rsa_message.grid(row=1, column=1)
+        self.rsa_message.insert(0, "42")
+
+        tk.Button(root, text="RSA Encrypt/Decrypt", command=self.rsa_test).grid(row=2, column=0, columnspan=2)
+
+        self.rsa_result = tk.Label(root, text="")
+        self.rsa_result.grid(row=3, column=0, columnspan=2)
+
+        # ECC Section
+        tk.Label(root, text="ECC ElGamal Encryption", font=("Arial", 14)).grid(row=4, column=0, columnspan=2)
+        tk.Label(root, text="Message Point (x,y):").grid(row=5, column=0)
+        self.ecc_message = tk.Entry(root)
+        self.ecc_message.grid(row=5, column=1)
+        self.ecc_message.insert(0, "10,20")
+
+        tk.Label(root, text="Random k:").grid(row=6, column=0)
+        self.k_value = tk.Entry(root)
+        self.k_value.grid(row=6, column=1)
+        self.k_value.insert(0, "3")
+
+        tk.Button(root, text="ECC Encrypt/Decrypt", command=self.ecc_test).grid(row=7, column=0, columnspan=2)
+
+        self.ecc_result = tk.Label(root, text="")
+        self.ecc_result.grid(row=8, column=0, columnspan=2)
+
+        # Comparison
+        tk.Button(root, text="Compare Performance", command=self.compare_performance).grid(row=9, column=0, columnspan=2)
+        self.comp_result = tk.Label(root, text="")
+        self.comp_result.grid(row=10, column=0, columnspan=2)
+
+    def rsa_test(self):
+        try:
+            m = int(self.rsa_message.get())
+            start = time.time()
+            c = self.rsa.encrypt(m)
+            d = self.rsa.decrypt(c)
+            end = time.time()
+            self.rsa_result.config(text=f"Encrypted: {c}\nDecrypted: {d}\nTime: {end-start:.6f}s")
+        except ValueError:
+            messagebox.showerror("Error", "Invalid RSA message")
+
+    def ecc_test(self):
+        try:
+            coords = self.ecc_message.get().split(',')
+            M = Point(int(coords[0]), int(coords[1]))
+            k = int(self.k_value.get())
+            start = time.time()
+            C1, C2 = self.ecc.encrypt(M, k)
+            decrypted = self.ecc.decrypt(C1, C2)
+            end = time.time()
+            self.ecc_result.config(text=f"C1: {C1}\nC2: {C2}\nDecrypted: {decrypted}\nTime: {end-start:.6f}s")
+        except Exception:
+            messagebox.showerror("Error", "Invalid ECC message or k")
+
+    def compare_performance(self):
+        # Simple comparison
+        rsa_times = []
+        ecc_times = []
+
+        for _ in range(10):
+            # RSA
+            m = 42
+            start = time.time()
+            c = self.rsa.encrypt(m)
+            self.rsa.decrypt(c)
+            end = time.time()
+            rsa_times.append(end - start)
+
+            # ECC
+            M = Point(10, 20)
+            k = 3
+            start = time.time()
+            C1, C2 = self.ecc.encrypt(M, k)
+            self.ecc.decrypt(C1, C2)
+            end = time.time()
+            ecc_times.append(end - start)
+
+        avg_rsa = sum(rsa_times) / len(rsa_times)
+        avg_ecc = sum(ecc_times) / len(ecc_times)
+
+        self.comp_result.config(text=f"Average RSA time: {avg_rsa:.6f}s\nAverage ECC time: {avg_ecc:.6f}s\n"
+                                   f"Key sizes: RSA n={self.rsa.n} ({len(str(self.rsa.n))} digits)\n"
+                                   f"ECC key size: p={self.ecc.p} ({len(str(self.ecc.p))} digits)")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = CryptoComparator(root)
+    root.mainloop()
