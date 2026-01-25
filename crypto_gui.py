@@ -261,7 +261,9 @@ class CryptoComparator:
             text = self.ascii_message.get()
             c = self.rsa.encrypt_text(text)
             d = self.rsa.decrypt_text(c)
-            self.ascii_result.config(text=f"Original: {text}\nEncrypted: {c}\nDecrypted: {d}", fg='green')
+            # Show symbols with ASCII values
+            symbol_vals = [f"{char}({ord(char)})" for char in text]
+            self.ascii_result.config(text=f"Original: {text}\nSymbols: {' '.join(symbol_vals)}\nEncrypted: {c}\nDecrypted: {d}", fg='green')
             self.animate_label(self.ascii_result, 'green', 'purple')
         except Exception as e:
             self.ascii_result.config(text=f"Error: {str(e)}", fg='red')
