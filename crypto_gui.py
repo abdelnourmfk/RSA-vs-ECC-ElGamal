@@ -1,6 +1,6 @@
 import tkinter as tk
-from tkinter import messagebox
 import time
+import hashlib
 
 # RSA Implementation
 def gcd(a, b):
@@ -50,6 +50,24 @@ class RSA:
 
     def decrypt(self, c):
         return mod_pow(c, self.d, self.n)
+
+    def encrypt_text(self, text):
+        encrypted = []
+        for char in text:
+            m = ord(char)
+            if m >= self.n:
+                raise ValueError("Character too large for RSA key")
+            c = self.encrypt(m)
+            encrypted.append(str(c))
+        return ','.join(encrypted)
+
+    def decrypt_text(self, encrypted_str):
+        decrypted = []
+        for c_str in encrypted_str.split(','):
+            c = int(c_str)
+            m = self.decrypt(c)
+            decrypted.append(chr(m))
+        return ''.join(decrypted)
 
 # ECC Implementation
 class Point:
@@ -120,47 +138,87 @@ class ECC_ElGamal:
         neg_dC1 = Point(dC1.x, (-dC1.y) % self.p)
         return point_add(C2, neg_dC1, self.a, self.p)
 
+    def encrypt_text(self, text, k):
+        # Encode text to point: use hash for x, compute y
+        h = int(hashlib.sha256(text.encode('utf-8')).hexdigest(), 16)
+        x = h % self.p
+        # Compute y^2 = x^3 + a x + b mod p
+        y2 = (mod_pow(x, 3, self.p) + self.a * x + self.b) % self.p
+        # Find y such that y^2 = y2 mod p (simple case, assume exists)
+        y = 0
+        for i in range(self.p):
+            if (i * i) % self.p == y2:
+                y = i
+                break
+        M = Point(x, y)
+        return self.encrypt(M, k)
+
+    def decrypt_text(self, C1, C2):
+        M = self.decrypt(C1, C2)
+        # Cannot reverse hash, so return the point
+        return M
+
 # GUI
 class CryptoComparator:
     def __init__(self, root):
         self.root = root
         self.root.title("RSA vs ECC ElGamal Comparator")
+        self.root.configure(bg='#f0f0f0')
         self.rsa = RSA()
         self.ecc = ECC_ElGamal()
 
         # RSA Section
-        tk.Label(root, text="RSA Encryption", font=("Arial", 14)).grid(row=0, column=0, columnspan=2)
-        tk.Label(root, text="Message (integer):").grid(row=1, column=0)
+        tk.Label(root, text="RSA Encryption", font=("Arial", 14, 'bold'), bg='#f0f0f0', fg='blue').grid(row=0, column=0, columnspan=2)
+        tk.Label(root, text="Message (integer):", bg='#f0f0f0').grid(row=1, column=0)
         self.rsa_message = tk.Entry(root)
         self.rsa_message.grid(row=1, column=1)
         self.rsa_message.insert(0, "42")
 
-        tk.Button(root, text="RSA Encrypt/Decrypt", command=self.rsa_test).grid(row=2, column=0, columnspan=2)
+        tk.Button(root, text="RSA Encrypt/Decrypt", command=self.rsa_test, bg='lightblue').grid(row=2, column=0, columnspan=2)
 
-        self.rsa_result = tk.Label(root, text="")
+        self.rsa_result = tk.Label(root, text="", bg='#f0f0f0', fg='green')
         self.rsa_result.grid(row=3, column=0, columnspan=2)
 
         # ECC Section
-        tk.Label(root, text="ECC ElGamal Encryption", font=("Arial", 14)).grid(row=4, column=0, columnspan=2)
-        tk.Label(root, text="Message Point (x,y):").grid(row=5, column=0)
+        tk.Label(root, text="ECC ElGamal Encryption", font=("Arial", 14, 'bold'), bg='#f0f0f0', fg='blue').grid(row=4, column=0, columnspan=2)
+        tk.Label(root, text="Message Point (x,y):", bg='#f0f0f0').grid(row=5, column=0)
         self.ecc_message = tk.Entry(root)
         self.ecc_message.grid(row=5, column=1)
         self.ecc_message.insert(0, "10,20")
 
-        tk.Label(root, text="Random k:").grid(row=6, column=0)
+        tk.Label(root, text="Random k:", bg='#f0f0f0').grid(row=6, column=0)
         self.k_value = tk.Entry(root)
         self.k_value.grid(row=6, column=1)
         self.k_value.insert(0, "3")
 
-        tk.Button(root, text="ECC Encrypt/Decrypt", command=self.ecc_test).grid(row=7, column=0, columnspan=2)
+        tk.Button(root, text="ECC Encrypt/Decrypt", command=self.ecc_test, bg='lightgreen').grid(row=7, column=0, columnspan=2)
 
-        self.ecc_result = tk.Label(root, text="")
+        self.ecc_result = tk.Label(root, text="", bg='#f0f0f0', fg='green')
         self.ecc_result.grid(row=8, column=0, columnspan=2)
 
+        # ASCII Section
+        tk.Label(root, text="ASCII Encryption (RSA)", font=("Arial", 14, 'bold'), bg='#f0f0f0', fg='purple').grid(row=9, column=0, columnspan=2)
+        tk.Label(root, text="Message (text):", bg='#f0f0f0').grid(row=10, column=0)
+        self.ascii_message = tk.Entry(root)
+        self.ascii_message.grid(row=10, column=1)
+        self.ascii_message.insert(0, "Hello World")
+
+        tk.Button(root, text="ASCII Encrypt/Decrypt", command=self.ascii_test, bg='lightyellow').grid(row=11, column=0, columnspan=2)
+
+        self.ascii_result = tk.Label(root, text="", bg='#f0f0f0', fg='green')
+        self.ascii_result.grid(row=12, column=0, columnspan=2)
+
         # Comparison
-        tk.Button(root, text="Compare Performance", command=self.compare_performance).grid(row=9, column=0, columnspan=2)
-        self.comp_result = tk.Label(root, text="")
-        self.comp_result.grid(row=10, column=0, columnspan=2)
+        tk.Button(root, text="Compare Performance", command=self.compare_performance, bg='orange').grid(row=13, column=0, columnspan=2)
+        self.comp_result = tk.Label(root, text="", bg='#f0f0f0', fg='black')
+        self.comp_result.grid(row=14, column=0, columnspan=2)
+
+    def animate_label(self, label, color1, color2, count=5):
+        if count > 0:
+            current_color = label.cget('fg')
+            new_color = color2 if current_color == color1 else color1
+            label.config(fg=new_color)
+            self.root.after(200, self.animate_label, label, color1, color2, count-1)
 
     def rsa_test(self):
         try:
@@ -173,9 +231,11 @@ class CryptoComparator:
                 d = self.rsa.decrypt(c)
             end = time.perf_counter()
             avg_time = (end - start) / iterations
-            self.rsa_result.config(text=f"Encrypted: {c}\nDecrypted: {d}\nAvg Time: {avg_time:.8f}s per operation")
+            self.rsa_result.config(text=f"Encrypted: {c}\nDecrypted: {d}\nAvg Time: {avg_time:.8f}s per operation", fg='green')
+            self.animate_label(self.rsa_result, 'green', 'blue')
         except ValueError:
-            messagebox.showerror("Error", "Invalid RSA message")
+            self.rsa_result.config(text="Invalid RSA message", fg='red')
+            self.animate_label(self.rsa_result, 'red', 'orange')
 
     def ecc_test(self):
         try:
@@ -190,9 +250,22 @@ class CryptoComparator:
                 decrypted = self.ecc.decrypt(C1, C2)
             end = time.perf_counter()
             avg_time = (end - start) / iterations
-            self.ecc_result.config(text=f"C1: {C1}\nC2: {C2}\nDecrypted: {decrypted}\nAvg Time: {avg_time:.8f}s per operation")
+            self.ecc_result.config(text=f"C1: {C1}\nC2: {C2}\nDecrypted: {decrypted}\nAvg Time: {avg_time:.8f}s per operation", fg='green')
+            self.animate_label(self.ecc_result, 'green', 'blue')
         except Exception:
-            messagebox.showerror("Error", "Invalid ECC message or k")
+            self.ecc_result.config(text="Invalid ECC message or k", fg='red')
+            self.animate_label(self.ecc_result, 'red', 'orange')
+
+    def ascii_test(self):
+        try:
+            text = self.ascii_message.get()
+            c = self.rsa.encrypt_text(text)
+            d = self.rsa.decrypt_text(c)
+            self.ascii_result.config(text=f"Original: {text}\nEncrypted: {c}\nDecrypted: {d}", fg='green')
+            self.animate_label(self.ascii_result, 'green', 'purple')
+        except Exception as e:
+            self.ascii_result.config(text=f"Error: {str(e)}", fg='red')
+            self.animate_label(self.ascii_result, 'red', 'orange')
 
     def compare_performance(self):
         # Performance comparison with higher precision timing
@@ -228,7 +301,8 @@ class CryptoComparator:
                                    f"Average ECC time: {avg_ecc:.8f}s per operation\n"
                                    f"Key sizes: RSA n={self.rsa.n} ({len(str(self.rsa.n))} digits)\n"
                                    f"ECC key size: p={self.ecc.p} ({len(str(self.ecc.p))} digits)\n"
-                                   f"ECC is {avg_rsa/avg_ecc:.1f}x faster than RSA")
+                                   f"ECC is {avg_rsa/avg_ecc:.1f}x faster than RSA", fg='black')
+        self.animate_label(self.comp_result, 'black', 'orange')
 
 if __name__ == "__main__":
     root = tk.Tk()
