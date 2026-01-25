@@ -9,14 +9,7 @@ def gcd(a, b):
     return a
 
 def mod_pow(base, exp, mod):
-    result = 1
-    base %= mod
-    while exp > 0:
-        if exp % 2 == 1:
-            result = (result * base) % mod
-        base = (base * base) % mod
-        exp //= 2
-    return result
+    return pow(base, exp, mod)
 
 def mod_inverse(a, m):
     m0 = m
