@@ -137,10 +137,19 @@ int main() {
             case 2: {
                 Point pt;
                 printf("Entrez x et y du point : ");
-                scanf("%d %d", &pt.x, &pt.y);
+                if (scanf("%d %d", &pt.x, &pt.y) != 2) { vider_buffer(); break; }
+                vider_buffer();
                 pt.is_infinity = false;
-                if (Is_on_curve(pt, a, b, p)) printf("Le point est sur la courbe.\n");
-                else printf("Le point n'est PAS sur la courbe.\n");
+                printf("\nVerification du point "); print_point(pt); printf(" :\n");
+                long long y2 = (long long)pt.y * pt.y;
+                long long rhs = (long long)pt.x * pt.x * pt.x + (long long)a * pt.x + b;
+                printf("y^2 = %lld (mod %d) = %d\n", y2, p, mod(y2, p));
+                printf("x^3 + ax + b = %lld (mod %d) = %d\n", rhs, p, mod(rhs, p));
+                if (Is_on_curve(pt, a, b, p)) {
+                    printf("--> Le point APPARTIENT a la courbe !\n");
+                } else {
+                    printf("--> Le point N'APPARTIENT PAS a la courbe !\n");
+                }
                 break;
             }
 

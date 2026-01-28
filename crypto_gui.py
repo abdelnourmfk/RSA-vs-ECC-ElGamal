@@ -292,11 +292,12 @@ class CryptoComparator:
         avg_rsa = sum(rsa_times) / len(rsa_times)
         avg_ecc = sum(ecc_times) / len(ecc_times)
 
+        ratio = avg_ecc / avg_rsa if avg_rsa != 0 else 0
         self.comp_result.config(text=f"Average RSA time: {avg_rsa:.8f}s per operation\n"
                                    f"Average ECC time: {avg_ecc:.8f}s per operation\n"
                                    f"Key sizes: RSA n={self.rsa.n} ({len(str(self.rsa.n))} digits)\n"
                                    f"ECC key size: p={self.ecc.p} ({len(str(self.ecc.p))} digits)\n"
-                                   f"ECC is {avg_rsa/avg_ecc:.1f}x faster than RSA", fg='black')
+                                   f"RSA is {ratio:.1f}x faster than ECC", fg='black')
         self.animate_label(self.comp_result, 'black', 'orange')
 
 if __name__ == "__main__":
